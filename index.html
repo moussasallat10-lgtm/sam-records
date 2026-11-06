@@ -112,7 +112,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:8px;borde
 <p class="foot" id="foot"></p>
 <footer class="copy"><div>© 2026 عيادة سام. جميع الحقوق محفوظة</div><div>تصميم وتطوير: فايتك للبرمجة – موسى سلات</div></footer>
 </div>
-<div id="lock"><div class="panel" style="width:min(340px,90vw);text-align:center"><h3 style="margin:0 0 12px">عيادة سام</h3><select id="lu" aria-label="المستخدم" style="margin-bottom:10px"></select><input id="lp" type="password" placeholder="كلمة السر" aria-label="كلمة السر" style="text-align:center"><div class="err" id="lerr"></div><button class="btn pri" id="lb">دخول</button></div></div>
+<div id="lock"><div class="panel" style="width:min(340px,90vw);text-align:center"><h3 style="margin:0 0 12px">عيادة سام</h3><input id="lu" list="lul" placeholder="اسم المستخدم" aria-label="المستخدم" autocomplete="username" style="margin-bottom:10px;text-align:center"><datalist id="lul"></datalist><input id="lp" type="password" placeholder="كلمة السر" aria-label="كلمة السر" style="text-align:center"><div class="err" id="lerr"></div><button class="btn pri" id="lb">دخول</button></div></div>
 <a id="bookc" class="bookc" href="#" target="_blank" rel="noopener" style="display:none" aria-label="الحجوزات"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></a>
 <button id="bkc" aria-label="الحجوزات">📅<span id="bkn"></span></button>
 <dialog id="dlg"></dialog>
@@ -148,16 +148,17 @@ function persist(p){if(p.trash)p.trash=p.trash.filter(function(x){return Date.no
  else saveLocal();
  render();
 }
-function note(m,bad){var f=$('foot');f.textContent=m;f.style.color=bad?'var(--no)':''}
+function jget(u,n){n=n||3;return new Promise(function(res,rej){var a=0,go=function(){a++;var c=new AbortController(),t=setTimeout(function(){c.abort()},15000);fetch(u,{signal:c.signal}).then(function(r){clearTimeout(t);return r.json()}).then(res).catch(function(e){clearTimeout(t);if(a<n)setTimeout(go,1200*a);else rej(e)})};go()})}
+function note(m,bad){var f=$('foot');f.textContent=m;f.style.color=bad?'var(--no)':'';if(bad&&KEY){f.insertAdjacentHTML('beforeend',' <button class="btn sm" id="rt" type="button">إعادة المحاولة</button>');$('rt').onclick=function(){startApi()}}}
 function pend(){try{return JSON.parse(localStorage.getItem(PEND)||'[]')}catch(e){return[]}}
 function setPend(a){try{localStorage.setItem(PEND,JSON.stringify(a))}catch(e){}}
-function send(p){return fetch(API,{method:'POST',body:JSON.stringify({name:UNAME,key:KEY,patient:p})}).then(function(r){return r.json()}).then(function(j){if(!j.ok)throw 0})}
+function send(p){var ac=new AbortController();setTimeout(function(){ac.abort()},20000);return fetch(API,{method:'POST',signal:ac.signal,body:JSON.stringify({name:UNAME,key:KEY,patient:p})}).then(function(r){return r.json()}).then(function(j){if(!j.ok)throw 0})}
 function push(p){var a=pend();if(a.indexOf(p.id)<0){a.push(p.id);setPend(a)}flush()}
 function flush(){var a=pend();if(!a.length){note('تم الحفظ في جوجل شيت ✓');return Promise.resolve()}
  note('جارٍ الحفظ…');var id=a[0];
  return send(P[id]).then(function(){setPend(pend().filter(function(x){return x!==id}));return flush()}).catch(function(){note('لم يُحفظ بعد. تحقق من الإنترنت، وسيُعاد الحفظ تلقائياً.',1)})}
 function startApi(){note('جارٍ تحميل السجلات…');
- fetch(loginUrl(UNAME,KEY)).then(function(r){return r.json()}).then(function(j){
+ jget(loginUrl(UNAME,KEY),3).then(function(j){
   if(!j.patients)throw 0;var m={};j.patients.forEach(function(p){m[p.id]=p});
   if(!j.patients.length&&Object.keys(P).length){setPend(Object.keys(P))}
   pend().forEach(function(id){if(P[id])m[id]=P[id]});
@@ -531,6 +532,18 @@ var DICT=`اللهم صل على سيدنا محمد|Peace and blessings be upon
 ربط|Link
 تم الربط|Linked
 فتح ملف الحجوزات|Open bookings file
+التقاط صورة للرمز|Take a photo of the code
+جارٍ تشغيل الكاميرا…|Starting the camera…
+وجّه الكاميرا نحو الرمز|Point the camera at the code
+جارٍ قراءة الصورة…|Reading the photo…
+الرمز غير معروف|Unknown code
+لم أجد رمزاً في الصورة. التقطها أقرب وأوضح.|No code found in the photo. Take it closer and clearer.
+تعذر تحميل مكتبة القراءة. تحقق من الإنترنت أو أوقف مانع الإعلانات.|Could not load the reader library. Check your internet or turn off the ad blocker.
+الكاميرا غير مسموحة لهذا الموقع. فعّل الإذن أو استخدم «التقاط صورة للرمز».|Camera is not allowed for this site. Enable it or use “Take a photo of the code”.
+لا توجد كاميرا في هذا الجهاز. استخدم «التقاط صورة للرمز».|No camera on this device. Use “Take a photo of the code”.
+إعادة المحاولة|Retry
+تعذر تحميل الأسماء. اكتب اسمك يدوياً أو غيّر الشبكة.|Could not load names. Type your name or change the network.
+تعذر تحميل مكتبة القراءة. شبكتك قد تحجب موقعها، جرّب شبكة أخرى أو VPN.|Could not load the reader library. Your network may block it; try another network or a VPN.
 عيادة|Clinic`;
 var EN=DICT.split('\n').map(function(l){var i=l.indexOf('|');return [l.slice(0,i),l.slice(i+1)]}).filter(function(a){return a[0]}).sort(function(a,b){return b[0].length-a[0].length});
 var orig=new WeakMap();
@@ -549,23 +562,25 @@ function setLang(l){LANG=l;try{localStorage.setItem('sam_lang',l)}catch(e){}
  trNode(document.body);render();}
 var UNAME='';
 function loginUrl(n,pw,x){return API+'?name='+encodeURIComponent(n)+'&key='+encodeURIComponent(pw)+(x||'')}
+function fillUsers(us){$('lul').innerHTML=us.map(function(n){return '<option value="'+esc(n)+'">'}).join('');if(us.length===1&&!$('lu').value)$('lu').value=us[0]}
 function lockInit(){
  if(!API)return;
+ window.addEventListener('online',function(){if(KEY)startApi()});
+ setInterval(function(){if(KEY&&pend().length)flush()},30000);
  document.body.classList.add('locked');$('lock').style.display='flex';
  var busy=false;
  var go=function(n,pw){if(busy||!n||!pw)return;busy=true;$('lerr').textContent='جارٍ التحقق…';
-  fetch(loginUrl(n,pw)).then(function(r){return r.json()}).then(function(j){
+  jget(loginUrl(n,pw),2).then(function(j){
    busy=false;
    if(j.patients){UNAME=n;KEY=pw;ROLE=(j.user&&j.user.role)||'staff';CUR=(j.settings&&j.settings.currency)||'';try{sessionStorage.setItem('sam_u',n);sessionStorage.setItem('sam_k',pw)}catch(e){}applyRole();$('lerr').textContent='';document.body.classList.remove('locked');$('lock').style.display='none';startApi();if(BOOKINGS)startBookings()}
    else $('lerr').textContent=j.error==='locked'?'محاولات كثيرة. حاول بعد 10 دقائق.':'كلمة السر غير صحيحة';
   }).catch(function(){busy=false;$('lerr').textContent='تعذر الاتصال. تحقق من الإنترنت.'})};
- $('lb').onclick=function(){go($('lu').value,$('lp').value)};
- $('lp').onkeydown=function(e){if(e.key==='Enter')go($('lu').value,$('lp').value)};
- fetch(API+'?action=users').then(function(r){return r.json()}).then(function(j){
-  $('lu').innerHTML=(j.users||[]).map(function(n){return '<option>'+esc(n)+'</option>'}).join('');
-  var u='',k='';try{u=sessionStorage.getItem('sam_u')||'';k=sessionStorage.getItem('sam_k')||''}catch(e){}
-  if(u)$('lu').value=u;if(u&&k)go(u,k);
- }).catch(function(){$('lerr').textContent='تعذر الاتصال. تحقق من الإنترنت.'});
+ $('lb').onclick=function(){go($('lu').value.trim(),$('lp').value)};
+ $('lp').onkeydown=function(e){if(e.key==='Enter')go($('lu').value.trim(),$('lp').value)};
+ var u='',k='',cu=[];try{u=sessionStorage.getItem('sam_u')||'';k=sessionStorage.getItem('sam_k')||''}catch(e){}
+ try{cu=JSON.parse(localStorage.getItem('sam_users')||'[]')}catch(e){}
+ fillUsers(cu);if(u)$('lu').value=u;if(u&&k)go(u,k);
+ jget(API+'?action=users').then(function(j){var us=j.users||[];try{localStorage.setItem('sam_users',JSON.stringify(us))}catch(e){}fillUsers(us)}).catch(function(){if(!cu.length)$('lerr').textContent='تعذر تحميل الأسماء. اكتب اسمك يدوياً أو غيّر الشبكة.'});
 }
 function applyRole(){var a=ROLE==='admin';$('exp').style.display=a?'':'none';$('repb').style.display=a?'':'none';$('setb').style.display=(a&&API)?'':'none'}
 function post(o){o.name=UNAME;o.key=KEY;return fetch(API,{method:'POST',body:JSON.stringify(o)}).then(function(r){return r.json()})}
@@ -653,8 +668,8 @@ function planFormAdm(){
    p.plans=(p.plans||[]).concat([{id:'pl'+Date.now(),title:$('pp2').value.trim(),notes:$('pp3').value.trim(),total:tot,start:st,inst:inst}]);
    persist(p);plansView()}})
 }
-function loadJs(u){return new Promise(function(res,rej){var e=document.createElement('script');e.src=u;e.onload=res;e.onerror=rej;document.head.appendChild(e)})}
-function pdfLibs(){if(window.html2canvas&&window.jspdf)return Promise.resolve();return loadJs('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js').then(function(){return loadJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')})}
+function loadJs(u){var L=[].concat(u);return new Promise(function(res,rej){var i=0,t=function(){if(i>=L.length)return rej(new Error('load'));var e=document.createElement('script'),done=false,nx=function(){if(done)return;done=true;e.remove();t()};e.src=L[i++];e.onload=function(){if(!done){done=true;res()}};e.onerror=nx;setTimeout(nx,12000);document.head.appendChild(e)};t()})}
+function pdfLibs(){if(window.html2canvas&&window.jspdf)return Promise.resolve();return loadJs(['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js']).then(function(){return loadJs(['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js','https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'])})}
 function sendPdf(fn,btn,wa,pp){
  var src=dlg.firstElementChild;if(!src)return;var old=btn.textContent;btn.textContent=trs('جارٍ إنشاء الملف…');btn.disabled=true;
  var box=document.createElement('div');
@@ -671,7 +686,7 @@ function sendPdf(fn,btn,wa,pp){
   dl();
  }).then(fin).catch(function(){fin();alert(trs('تعذر إنشاء الملف. تحقق من الإنترنت.'))});
 }
-var VER='v2.2 · 2026-11-03',CUR='',BK=[],BKN=-1,DSL=['لم يحضر','في الانتظار','عند الدكتور','انتهى'];
+var VER='v2.4 · 2026-11-04',CUR='',BK=[],BKN=-1,DSL=['لم يحضر','في الانتظار','عند الدكتور','انتهى'];
 function rnd(){return Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(10)),function(b){return (b%36).toString(36)}).join('')}
 function nextApt(p){var td=today(),c=[];(p.visits||[]).forEach(function(v){if(v.next&&v.next>=td)c.push({next:v.next,nextT:v.nextT,o:v})});if(p.apt&&p.apt.date>=td)c.push({next:p.apt.date,nextT:p.apt.time,o:p.apt});c.sort(function(a,b){return (a.next+(a.nextT||'')).localeCompare(b.next+(b.nextT||''))});return c[0]||null}
 function dlab(d){var n=Math.round((new Date(d+'T00:00')-new Date(today()+'T00:00'))/864e5);return n===0?'اليوم':n===1?'غداً':n===2?'بعد غد':dayName(d)+' '+d}
@@ -720,7 +735,7 @@ function bkConvert(id){var b=BK.filter(function(x){return x.id===id})[0];if(!b)r
  var p=ex?P[ex]:{id:nextId(),first:parts[0]||'',last:parts.slice(1).join(' '),father:'',mother:'',age:'',phone:d,cc:cc,notes:'',visits:[]};
  p.apt={date:b.date,time:b.time,rem:false};persist(p);b.status='converted';post({action:'bookingStatus',id:b.id,status:'converted',patientId:p.id});bkBadge();dlg.close();sel=p.id;home=false;render()}
 /* ---- QR ---- */
-function qrLib(){return window.qrcode?Promise.resolve():loadJs('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js')}
+function qrLib(){return window.qrcode?Promise.resolve():loadJs(['https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js','https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js','https://unpkg.com/qrcode-generator@1.4.4/qrcode.js'])}
 function qrCard(p){
  if(!p.qr){p.qr=rnd();persist(p)}
  qrLib().then(function(){var q=qrcode(0,'M');q.addData('SC1.'+p.qr);q.make();var img=q.createDataURL(8,2),R=function(a,b,l){return '<tr><td style="color:var(--mut)">'+a+'</td><td'+(l?' dir="ltr"':'')+'><b>'+b+'</b></td></tr>'};
@@ -729,16 +744,23 @@ function qrCard(p){
   if($('wa'))$('wa').onclick=function(){sendPdf(fn,$('wa'),true,p)};$('sh').onclick=function(){sendPdf(fn,$('sh'),false,p)};pdfLibs().catch(function(){})
  }).catch(function(){alert(trs('تعذر تحميل مكتبة الرمز. تحقق من الإنترنت.'))})}
 function scanView(){
- open('<div class="row" style="margin-bottom:8px"><h3 style="margin:0">مسح رمز المريض</h3><button class="btn sm" id="cx" style="margin-inline-start:auto">إغلاق</button></div><video id="sv" playsinline muted style="width:100%;border-radius:16px;background:#000"></video><div class="err" id="er">جارٍ تشغيل الكاميرا…</div>');
- var v=$('sv'),st=null,on=true,cv=document.createElement('canvas'),cx=cv.getContext('2d');
+ open('<div class="row" style="margin-bottom:8px"><h3 style="margin:0">مسح رمز المريض</h3><button class="btn sm" id="cx" style="margin-inline-start:auto">إغلاق</button></div><video id="sv" autoplay playsinline muted style="width:100%;border-radius:16px;background:#000"></video><div class="err" id="er">جارٍ تشغيل الكاميرا…</div><label class="btn sm" style="display:inline-block;margin-top:8px">التقاط صورة للرمز<input id="sf" type="file" accept="image/*" capture="environment" style="display:none"></label>');
+ var v=$('sv'),st=null,on=true,det=null;
+ try{if(window.BarcodeDetector)det=new BarcodeDetector({formats:['qr_code']})}catch(e){}
+ v.muted=true;v.setAttribute('playsinline','');
  var stop=function(){on=false;if(st)st.getTracks().forEach(function(t){t.stop()})};
  $('cx').onclick=function(){stop();dlg.close()};dlg.addEventListener('close',stop,{once:true});
- loadJs('https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js').then(function(){return navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}).then(function(s){st=s;v.srcObject=s;v.play();$('er').textContent='وجّه الكاميرا نحو الرمز';
+ var found=function(txt){if(!txt||txt.indexOf('SC1.')!==0)return false;var tk=txt.slice(4),f=Object.keys(P).filter(function(k){return P[k].qr===tk})[0];
+  if(f){stop();dlg.close();sel=f;home=false;render();return true}$('er').textContent='الرمز غير معروف';return true};
+ var ready=det?Promise.resolve():loadJs(['https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js','https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js','https://unpkg.com/jsqr@1.4.0/dist/jsQR.js']).catch(function(){$('er').textContent='تعذر تحميل مكتبة القراءة. شبكتك قد تحجب موقعها، جرّب شبكة أخرى أو VPN.';throw 0});
+ var read=function(src,w,h,mx){if(det)return det.detect(src).then(function(r){return r&&r[0]?r[0].rawValue:''}).catch(function(){return ''});
+  var k=Math.min(1,mx/Math.max(w,h)),cw=Math.round(w*k),ch=Math.round(h*k),c=document.createElement('canvas');c.width=cw;c.height=ch;var x=c.getContext('2d');x.drawImage(src,0,0,cw,ch);var d=x.getImageData(0,0,cw,ch),r=window.jsQR(d.data,cw,ch);return Promise.resolve(r?r.data:'')};
+ $('sf').onchange=function(){var fl=this.files[0];if(!fl)return;$('er').textContent='جارٍ قراءة الصورة…';
+  ready.then(function(){var im=new Image();im.onload=function(){read(im,im.width,im.height,1600).then(function(t){if(!found(t))$('er').textContent='لم أجد رمزاً في الصورة. التقطها أقرب وأوضح.'})};im.src=URL.createObjectURL(fl)}).catch(function(){})};
+ ready.then(function(){if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return Promise.reject({name:'NoMedia'});return navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}).then(function(s){st=s;v.srcObject=s;return v.play()}).then(function(){$('er').textContent='وجّه الكاميرا نحو الرمز';
   var tick=function(){if(!on)return;
-   if(v.readyState>=2&&v.videoWidth){cv.width=v.videoWidth;cv.height=v.videoHeight;cx.drawImage(v,0,0);var im=cx.getImageData(0,0,cv.width,cv.height),r=window.jsQR(im.data,im.width,im.height);
-    if(r&&r.data.indexOf('SC1.')===0){var tk=r.data.slice(4),f=Object.keys(P).filter(function(k){return P[k].qr===tk})[0];
-     if(f){stop();dlg.close();sel=f;home=false;render();return}else $('er').textContent='الرمز غير معروف'}}
-   requestAnimationFrame(tick)};tick()}).catch(function(){$('er').textContent='تعذر تشغيل الكاميرا. اسمح بالوصول إلى الكاميرا وتحقق من الإنترنت.'})}
+   if(v.readyState>=2&&v.videoWidth){read(v,v.videoWidth,v.videoHeight,640).then(function(t){if(on&&t&&found(t))return;setTimeout(function(){requestAnimationFrame(tick)},60)})}else requestAnimationFrame(tick)};tick()}).catch(function(e){if(e===0)return;var n=e&&e.name;
+  $('er').textContent=(n==='NotAllowedError'||n==='SecurityError')?'الكاميرا غير مسموحة لهذا الموقع. فعّل الإذن أو استخدم «التقاط صورة للرمز».':(n==='NotFoundError'?'لا توجد كاميرا في هذا الجهاز. استخدم «التقاط صورة للرمز».':'تعذر تشغيل الكاميرا ('+(n||'?')+'). استخدم «التقاط صورة للرمز».')})}
 /* ---- إملاء صوتي ---- */
 function micAll(){var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;['f7','v3'].forEach(function(id){var i=$(id);if(!i)return;var b=document.createElement('button');b.type='button';b.className='btn sm';b.textContent='🎤 إملاء صوتي';b.style.marginTop='6px';
  b.onclick=function(){var r=new SR();r.lang=LANG==='en'?'en-US':'ar-SA';r.interimResults=false;b.textContent='🎙 أستمع…';r.onresult=function(e){i.value=(i.value?i.value+' ':'')+e.results[0][0].transcript;i.dispatchEvent(new Event('input'))};r.onend=r.onerror=function(){b.textContent='🎤 إملاء صوتي'};try{r.start()}catch(x){}};i.insertAdjacentElement('afterend',b)})}
