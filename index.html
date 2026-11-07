@@ -112,7 +112,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:8px;borde
 <p class="foot" id="foot"></p>
 <footer class="copy"><div>© 2026 عيادة سام. جميع الحقوق محفوظة</div><div>تصميم وتطوير: فايتك للبرمجة – موسى سلات</div></footer>
 </div>
-<div id="lock"><div class="panel" style="width:min(340px,90vw);text-align:center"><h3 style="margin:0 0 12px">عيادة سام</h3><input id="lu" list="lul" placeholder="اسم المستخدم" aria-label="المستخدم" autocomplete="username" style="margin-bottom:10px;text-align:center"><datalist id="lul"></datalist><input id="lp" type="password" placeholder="كلمة السر" aria-label="كلمة السر" style="text-align:center"><div class="err" id="lerr"></div><button class="btn pri" id="lb">دخول</button></div></div>
+<div id="lock"><div class="panel" style="width:min(340px,90vw);text-align:center"><h3 style="margin:0 0 12px">عيادة سام</h3><input id="lu" list="lul" placeholder="اسم المستخدم" aria-label="المستخدم" autocomplete="username" style="margin-bottom:10px;text-align:center"><datalist id="lul"></datalist><input id="lp" type="password" placeholder="كلمة السر" aria-label="كلمة السر" style="text-align:center"><div class="err" id="lerr"></div><button class="btn pri" id="lb">دخول</button><div class="row" style="justify-content:center;margin-top:12px"><button class="btn sm" id="dg" type="button">فحص الاتصال</button></div><div id="dgo" style="margin-top:8px;font-size:13px;color:var(--mut);min-height:18px"></div><div id="lv" style="margin-top:6px;font-size:12px;color:var(--mut)"></div></div></div>
 <a id="bookc" class="bookc" href="#" target="_blank" rel="noopener" style="display:none" aria-label="الحجوزات"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></a>
 <button id="bkc" aria-label="الحجوزات">📅<span id="bkn"></span></button>
 <dialog id="dlg"></dialog>
@@ -125,7 +125,7 @@ var API='https://script.google.com/macros/s/AKfycbzyB7xXFSwLM5PKo14tpQeoiOwIIU77
 var KEY='';
 var BOOK_URL=''; // رابط موقع الحجوزات (الدائرة الزرقاء الجانبية). اتركه فارغاً لإخفائها
 /* ===================================================================== */
-var P={},sel=null,col=null,LS='sam_clinic_patients',PEND='sam_pending',home=window.innerWidth>900,LANG='ar',ROLE='admin',USER='';
+var P={},sel=null,col=null,NS=(function(){var h=7;for(var i=0;i<API.length;i++)h=(h*31+API.charCodeAt(i))|0;return (h>>>0).toString(36)})(),LS='sam_cp_'+NS,PEND='sam_pend_'+NS,home=window.innerWidth>900,LANG='ar',ROLE='admin',USER='';
 var $=function(i){return document.getElementById(i)};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function num(v){var n=parseFloat(v);return isNaN(n)||n<0?0:n}
@@ -148,15 +148,21 @@ function persist(p){if(p.trash)p.trash=p.trash.filter(function(x){return Date.no
  else saveLocal();
  render();
 }
-function jget(u,n){n=n||3;return new Promise(function(res,rej){var a=0,go=function(){a++;var c=new AbortController(),t=setTimeout(function(){c.abort()},15000);fetch(u,{signal:c.signal}).then(function(r){clearTimeout(t);return r.json()}).then(res).catch(function(e){clearTimeout(t);if(a<n)setTimeout(go,1200*a);else rej(e)})};go()})}
+function jget(u,n){n=n||3;return new Promise(function(res,rej){var a=0,go=function(){a++;var c=new AbortController(),t=setTimeout(function(){c.abort()},25000);fetch(u,{signal:c.signal}).then(function(r){clearTimeout(t);return r.json()}).then(res).catch(function(e){clearTimeout(t);if(a<n)setTimeout(go,1200*a);else rej(e)})};go()})}
 function note(m,bad){var f=$('foot');f.textContent=m;f.style.color=bad?'var(--no)':'';if(bad&&KEY){f.insertAdjacentHTML('beforeend',' <button class="btn sm" id="rt" type="button">إعادة المحاولة</button>');$('rt').onclick=function(){startApi()}}}
 function pend(){try{return JSON.parse(localStorage.getItem(PEND)||'[]')}catch(e){return[]}}
 function setPend(a){try{localStorage.setItem(PEND,JSON.stringify(a))}catch(e){}}
-function send(p){var ac=new AbortController();setTimeout(function(){ac.abort()},20000);return fetch(API,{method:'POST',signal:ac.signal,body:JSON.stringify({name:UNAME,key:KEY,patient:p})}).then(function(r){return r.json()}).then(function(j){if(!j.ok)throw 0})}
+function send(p){var ac=new AbortController(),t=setTimeout(function(){ac.abort()},45000);
+ return fetch(API,{method:'POST',signal:ac.signal,body:JSON.stringify({name:UNAME,key:KEY,patient:p})}).then(function(r){clearTimeout(t);return r.json()}).then(function(j){if(!j.ok){var e=new Error('srv');e.why=j.error||'server';throw e}}).catch(function(e){clearTimeout(t);if(!e.why)e.why=(e&&e.name==='AbortError')?'timeout':'network';throw e})}
 function push(p){var a=pend();if(a.indexOf(p.id)<0){a.push(p.id);setPend(a)}flush()}
 function flush(){var a=pend();if(!a.length){note('تم الحفظ في جوجل شيت ✓');return Promise.resolve()}
  note('جارٍ الحفظ…');var id=a[0];
- return send(P[id]).then(function(){setPend(pend().filter(function(x){return x!==id}));return flush()}).catch(function(){note('لم يُحفظ بعد. تحقق من الإنترنت، وسيُعاد الحفظ تلقائياً.',1)})}
+ if(!P[id]){setPend(pend().filter(function(x){return x!==id}));return flush()}
+ return send(P[id]).then(function(){setPend(pend().filter(function(x){return x!==id}));return flush()}).catch(function(e){var w=(e&&e.why)||'?';
+  if(w==='invalid'){setPend(pend().filter(function(x){return x!==id}));return flush()}
+  if(w==='auth'){try{sessionStorage.removeItem('sam_u');sessionStorage.removeItem('sam_k')}catch(x){}KEY='';location.reload();return}
+  if(w==='locked')note('الدخول مقفول 10 دقائق بسبب محاولات خاطئة. سيُعاد الحفظ لاحقاً.',1);
+  else note('لم يُحفظ بعد. تحقق من الإنترنت، وسيُعاد الحفظ تلقائياً. ['+w+']',1)})}
 function startApi(){note('جارٍ تحميل السجلات…');
  jget(loginUrl(UNAME,KEY),3).then(function(j){
   if(!j.patients)throw 0;var m={};j.patients.forEach(function(p){m[p.id]=p});
@@ -544,6 +550,13 @@ var DICT=`اللهم صل على سيدنا محمد|Peace and blessings be upon
 إعادة المحاولة|Retry
 تعذر تحميل الأسماء. اكتب اسمك يدوياً أو غيّر الشبكة.|Could not load names. Type your name or change the network.
 تعذر تحميل مكتبة القراءة. شبكتك قد تحجب موقعها، جرّب شبكة أخرى أو VPN.|Could not load the reader library. Your network may block it; try another network or a VPN.
+فحص الاتصال|Test connection
+جارٍ الفحص…|Testing…
+✓ الاتصال بجوجل يعمل (|✓ Google connection works (
+✗ لا يصل إلى جوجل (|✗ Cannot reach Google (
+ ث). جرّب شبكة أخرى أو غيّر DNS.| s). Try another network or change DNS.
+ ث)| s)
+الدخول مقفول 10 دقائق بسبب محاولات خاطئة. سيُعاد الحفظ لاحقاً.|Login is locked for 10 minutes after wrong attempts. Saving will retry later.
 عيادة|Clinic`;
 var EN=DICT.split('\n').map(function(l){var i=l.indexOf('|');return [l.slice(0,i),l.slice(i+1)]}).filter(function(a){return a[0]}).sort(function(a,b){return b[0].length-a[0].length});
 var orig=new WeakMap();
@@ -568,6 +581,8 @@ function lockInit(){
  window.addEventListener('online',function(){if(KEY)startApi()});
  setInterval(function(){if(KEY&&pend().length)flush()},30000);
  document.body.classList.add('locked');$('lock').style.display='flex';
+ $('lv').textContent=VER;
+ $('dg').onclick=function(){var t0=Date.now();$('dgo').textContent='جارٍ الفحص…';jget(API+'?action=users',1).then(function(){$('dgo').textContent='✓ الاتصال بجوجل يعمل ('+((Date.now()-t0)/1000).toFixed(1)+' ث)'}).catch(function(){$('dgo').textContent='✗ لا يصل إلى جوجل ('+Math.round((Date.now()-t0)/1000)+' ث). جرّب شبكة أخرى أو غيّر DNS.'})};
  var busy=false;
  var go=function(n,pw){if(busy||!n||!pw)return;busy=true;$('lerr').textContent='جارٍ التحقق…';
   jget(loginUrl(n,pw),2).then(function(j){
@@ -578,9 +593,9 @@ function lockInit(){
  $('lb').onclick=function(){go($('lu').value.trim(),$('lp').value)};
  $('lp').onkeydown=function(e){if(e.key==='Enter')go($('lu').value.trim(),$('lp').value)};
  var u='',k='',cu=[];try{u=sessionStorage.getItem('sam_u')||'';k=sessionStorage.getItem('sam_k')||''}catch(e){}
- try{cu=JSON.parse(localStorage.getItem('sam_users')||'[]')}catch(e){}
+ try{cu=JSON.parse(localStorage.getItem('sam_users_'+NS)||'[]')}catch(e){}
  fillUsers(cu);if(u)$('lu').value=u;if(u&&k)go(u,k);
- jget(API+'?action=users').then(function(j){var us=j.users||[];try{localStorage.setItem('sam_users',JSON.stringify(us))}catch(e){}fillUsers(us)}).catch(function(){if(!cu.length)$('lerr').textContent='تعذر تحميل الأسماء. اكتب اسمك يدوياً أو غيّر الشبكة.'});
+ jget(API+'?action=users').then(function(j){var us=j.users||[];try{localStorage.setItem('sam_users_'+NS,JSON.stringify(us))}catch(e){}fillUsers(us)}).catch(function(){if(!cu.length)$('lerr').textContent='تعذر تحميل الأسماء. اكتب اسمك يدوياً أو غيّر الشبكة.'});
 }
 function applyRole(){var a=ROLE==='admin';$('exp').style.display=a?'':'none';$('repb').style.display=a?'':'none';$('setb').style.display=(a&&API)?'':'none'}
 function post(o){o.name=UNAME;o.key=KEY;return fetch(API,{method:'POST',body:JSON.stringify(o)}).then(function(r){return r.json()})}
@@ -686,7 +701,7 @@ function sendPdf(fn,btn,wa,pp){
   dl();
  }).then(fin).catch(function(){fin();alert(trs('تعذر إنشاء الملف. تحقق من الإنترنت.'))});
 }
-var VER='v2.4 · 2026-11-04',CUR='',BK=[],BKN=-1,DSL=['لم يحضر','في الانتظار','عند الدكتور','انتهى'];
+var VER='v2.7 · 2026-11-04',CUR='',BK=[],BKN=-1,DSL=['لم يحضر','في الانتظار','عند الدكتور','انتهى'];
 function rnd(){return Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(10)),function(b){return (b%36).toString(36)}).join('')}
 function nextApt(p){var td=today(),c=[];(p.visits||[]).forEach(function(v){if(v.next&&v.next>=td)c.push({next:v.next,nextT:v.nextT,o:v})});if(p.apt&&p.apt.date>=td)c.push({next:p.apt.date,nextT:p.apt.time,o:p.apt});c.sort(function(a,b){return (a.next+(a.nextT||'')).localeCompare(b.next+(b.nextT||''))});return c[0]||null}
 function dlab(d){var n=Math.round((new Date(d+'T00:00')-new Date(today()+'T00:00'))/864e5);return n===0?'اليوم':n===1?'غداً':n===2?'بعد غد':dayName(d)+' '+d}
@@ -752,7 +767,7 @@ function scanView(){
  $('cx').onclick=function(){stop();dlg.close()};dlg.addEventListener('close',stop,{once:true});
  var found=function(txt){if(!txt||txt.indexOf('SC1.')!==0)return false;var tk=txt.slice(4),f=Object.keys(P).filter(function(k){return P[k].qr===tk})[0];
   if(f){stop();dlg.close();sel=f;home=false;render();return true}$('er').textContent='الرمز غير معروف';return true};
- var ready=det?Promise.resolve():loadJs(['https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js','https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js','https://unpkg.com/jsqr@1.4.0/dist/jsQR.js']).catch(function(){$('er').textContent='تعذر تحميل مكتبة القراءة. شبكتك قد تحجب موقعها، جرّب شبكة أخرى أو VPN.';throw 0});
+ var ready=det?Promise.resolve():loadJs(['https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js','https://unpkg.com/jsqr@1.4.0/dist/jsQR.js','https://cdn.jsdelivr.net/gh/cozmo/jsQR@1.4.0/dist/jsQR.js']).catch(function(){$('er').textContent='تعذر تحميل مكتبة القراءة. شبكتك قد تحجب موقعها، جرّب شبكة أخرى أو VPN.';throw 0});
  var read=function(src,w,h,mx){if(det)return det.detect(src).then(function(r){return r&&r[0]?r[0].rawValue:''}).catch(function(){return ''});
   var k=Math.min(1,mx/Math.max(w,h)),cw=Math.round(w*k),ch=Math.round(h*k),c=document.createElement('canvas');c.width=cw;c.height=ch;var x=c.getContext('2d');x.drawImage(src,0,0,cw,ch);var d=x.getImageData(0,0,cw,ch),r=window.jsQR(d.data,cw,ch);return Promise.resolve(r?r.data:'')};
  $('sf').onchange=function(){var fl=this.files[0];if(!fl)return;$('er').textContent='جارٍ قراءة الصورة…';

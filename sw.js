@@ -1,1 +1,1 @@
-self.addEventListener('install',function(){self.skipWaiting()});self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim())});self.addEventListener('fetch',function(){});
+self.addEventListener('install',function(){self.skipWaiting()});self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim())});self.addEventListener('fetch',function(e){var r=e.request;if(r.mode==='navigate'){e.respondWith(fetch(r.url,{cache:'no-store',credentials:'same-origin'}).catch(function(){return new Response('Offline',{status:503})}))}});
